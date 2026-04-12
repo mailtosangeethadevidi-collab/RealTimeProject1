@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum - Real-Time Posting</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8f9fd;
+            --primary-blue: #4a90e2;
+            --btn-blue: #3b82f6;
+            --text-main: #1a1a1a;
+            --text-muted: #6b7280;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            --gradient-sidebar: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        }
+
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-color); margin: 0; color: var(--text-main); }
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; position: relative; }
+
+        .top-nav { position: absolute; top: 0; right: 20px; text-align: right; z-index: 100; }
+        .home-link { text-decoration: none; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 10px; cursor: pointer; }
+        .ask-btn { background-color: var(--btn-blue); color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        .search-container { background: white; padding: 15px; border-radius: 15px; display: flex; gap: 10px; box-shadow: var(--card-shadow); margin: 40px 0 30px 0; }
+        .search-container input { flex: 1; padding: 12px; border: none; background: #f1f3f5; border-radius: 8px; outline: none; }
+
+        .layout { display: grid; grid-template-columns: 1fr 320px; gap: 30px; }
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { padding: 10px 22px; border: none; background: #e9ecef; border-radius: 25px; cursor: pointer; font-weight: 600; }
+        .tab.active { background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        .card { background: white; padding: 24px; border-radius: 16px; margin-bottom: 20px; box-shadow: var(--card-shadow); }
+        .stats { min-width: 90px; text-align: center; }
+        .q-link { color: var(--primary-blue); text-decoration: none; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+        .tag { background: #f1f3f5; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; margin-right: 6px; }
+
+        .forum-footer { border-top: 1px solid #eee; margin-top: 15px; padding-top: 15px; display: flex; gap: 20px; }
+        .action-btn { cursor: pointer; color: var(--text-muted); font-size: 0.9rem; border: none; background: none; }
+        .action-btn i { margin-right: 5px; }
+        .liked { color: #e0245e; }
+        .voted { color: #3b82f6; font-weight: bold; }
+
+        .answer-section { margin-top: 15px; background: #f9fafb; padding: 15px; border-radius: 10px; display: none; }
+        .ans-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
+        
+        .sidebar { background: var(--gradient-sidebar); color: white; padding: 25px; border-radius: 20px; height: fit-content; }
+        .view-box { 
+        background: white; 
+        padding: 30px; 
+        border-radius: 20px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+        border: 1px solid #edf2f7;
+    }
+    .form-title { color: #2d3748; margin-bottom: 20px; font-weight: 700; }
+    .post-btn { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        color: white; border: none; padding: 12px; border-radius: 10px; 
+        font-weight: 600; cursor: pointer; transition: transform 0.2s;
+    }
+    .post-btn:hover { transform: translateY(-2px); }
+    .author-link { color: #4db2ec; cursor: pointer; text-decoration: none; font-size: 0.85rem; }
+    .author-link:hover { text-decoration: underline; }
+    /* New style for the question details box */
+.details-section {
+    margin: 10px 0;padding: 12px;background: #f1f5f9;border-radius: 8px;
+    font-size: 0.95rem;color: #4a5568;display: none; /* Hidden by default */
+    border-left: 4px solid var(--primary-blue);
+}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-nav">
+        <a href="forum.html" class="home-link">DiscussionForum</a>
+        <button class="ask-btn" onclick="showSection('ask')">+ Ask Question</button>
+    </div>
+    <header>
+        <h1>Discussion Forum</h1>
+        <p>Post questions and get answers from the community.</p>
+    </header>
+    <div class="search-container" id="search-bar-ui">
+        <input type="text" id="searchInput" placeholder="Search questions..." onkeyup="handleSearch()">
+    </div>
+    <div class="layout">
+        <main>
+            <div class="nav-tabs" id="tab-nav">
+    <button class="tab active" id="tab-all" onclick="filterData('all')">All Questions</button>
+    <button class="tab" id="tab-unanswered" onclick="filterData('unanswered')">Unanswered</button>
+    <button class="tab" id="tab-answered" onclick="filterData('answered')">Answered</button> <button class="tab" id="tab-popular" onclick="filterData('popular')">Popular</button>
+</div>
+            <div id="dynamic-area"></div>
+        </main>
+        <aside class="sidebar">
+            <h3>Community Stats</h3>
+            <p>Join 5,000+ students sharing knowledge daily.</p>
+        </aside>
+    </div>
+</div>
+<script>
+    let activeFilter = 'all';
+    const userObj = JSON.parse(localStorage.getItem('loggedInUser')) || { name: "Guest", email: "guest@gmail.com" };
+    function getDB() {
+        return JSON.parse(localStorage.getItem('forumDB')) || [];
+    }
+    function saveDB(data) {
+        localStorage.setItem('forumDB', JSON.stringify(data));
+    }
+    function filterData(cat) {
+        activeFilter = cat;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + cat).classList.add('active');
+        let data = getDB();
+        if (cat === 'unanswered') {
+            data = data.filter(q => q.answers.length === 0);
+        } else if (cat === 'answered') {
+            data = data.filter(q => q.answers.length > 0);
+        } else if (cat === 'popular') {
+            data = data.sort((a, b) => b.votes - a.votes).slice(0, 5);
+        }
+        data.sort((a, b) => b.votes - a.votes);
+        renderList(data);
+    }
+ function renderList(data) {
+    const area = document.getElementById('dynamic-area');
+    const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser')) || {};
+    if (data.length === 0) {
+        area.innerHTML = `
+            <div style="text-align:center; padding:50px; color:#a0aec0;">
+                <i class="fa-solid fa-magnifying-glass" style="font-size:3rem; margin-bottom:15px;"></i>
+                <p>No questions found matching your search.</p>
+            </div>`;
+        return;
+    }
+    area.innerHTML = data.map(q => {
+        const qEmail = (q.email || "").trim().toLowerCase();
+        const qAuthorName = (q.author || "").trim().toLowerCase();
+        let authorProfile = allUsers.find(u => {
+            const uEmail = (u.email || "").trim().toLowerCase();
+            const uName = (u.name || "").trim().toLowerCase();
+            if (qEmail && uEmail && qEmail === uEmail) return true
+            if (qAuthorName && uName && qAuthorName === uName) return true;
+            return false;
+        });
+        if (!authorProfile && loggedInUser.email && qEmail === loggedInUser.email.toLowerCase()) {
+            authorProfile = loggedInUser;
+        }
+        const profilePicUrl = authorProfile?.profilePic || 
+                             authorProfile?.image || 
+                             'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
+        const isMe = loggedInUser.email && qEmail === loggedInUser.email.toLowerCase();
+        const displayName = isMe ? "You" : (authorProfile ? authorProfile.name : q.author);
+        const profileLink = isMe ? "profile.html" : `user-profile.html?email=${q.email}`;
+        return `
+<div class="answer-section" id="ans-box-${q.id}" style="display:none; margin-top:20px; padding-top:15px; border-top:1px solid #edf2f7;">
+    <h4 style="font-size:1rem; margin-bottom:10px; color:#2d3748;">Answers</h4>
+    <div id="ans-list-${q.id}" style="margin-bottom:20px;">
+        </div>
+    <div style="display:flex; gap:10px;">
+        <input type="text" id="input-${q.id}" class="ans-input" placeholder="Write an answer..." 
+               style="flex:1; padding:10px; border:1px solid #e2e8f0; border-radius:8px;">
+        <button class="post-btn" onclick="submitAnswer(${q.id})" 
+                style="padding:10px 20px; background:#4a90e2; color:white; border:none; border-radius:8px; cursor:pointer;">
+            Post
+            </button>  </div></div>
+        <div class="card">
+            <div style="display:flex; gap:20px;">
+                <div class="author-info" style="text-align:center; min-width:80px;">
+                    <img src="${profilePicUrl}" 
+                         style="width:55px; height:55px; border-radius:50%; object-fit:cover; border:2px solid #e2e8f0; cursor:pointer;" 
+                         onclick="window.location.href='${profileLink}'"
+                         onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+                    <div class="stats" style="margin-top:10px; font-size:0.85rem;">
+                        <strong>${q.votes || 0}</strong> votes
+                        <br>
+                        <strong class="${q.answers?.length > 0 ? 'success' : ''}">${q.answers?.length || 0}</strong> ans
+                    </div></div>
+                <div style="flex:1">
+                    <div class="q-link" onclick="toggleDetails(${q.id})" style="font-size:1.2rem; font-weight:bold; color:#2d3748; cursor:pointer;">
+                        ${q.title}   </div>
+                    <div style="margin: 5px 0 10px 0; font-size:0.9rem;">
+                        <span style="color:#718096;">By</span>
+ <span class="author-link" onclick="window.location.href='${profileLink}'" style="cursor:pointer; color: #0a66c2; font-weight:600; margin-left:4px;">
+${displayName}
+                        </span>
+                        <span style="font-size:0.75rem; color:#a0aec0; margin-left:8px;">
+                            ${q.email && q.email !== 'undefined' ? `(${q.email})` : '(Verified Member)'}
+                        </span> </div>
+
+                    <div style="margin-bottom:15px;">
+                        ${q.tags ? q.tags.map(t => `<span class="tag" style="background:#edf2f7; padding:4px 10px; border-radius:15px; font-size:0.75rem; margin-right:5px; color:#4a5568;">${t}</span>`).join('') : ''}
+                    </div>
+                    
+                    <div class="details-section" id="details-${q.id}" style="display:none; background:#f7fafc; padding:15px; border-radius:8px; margin-bottom:15px; border-left:4px solid #cbd5e0;">
+                        <strong>Details:</strong><br>${q.body || 'No additional details provided.'}
+                    </div>
+
+                    <div class="forum-footer" style="display:flex; gap:15px; border-top:1px solid #f0f4f8; padding-top:10px;">
+                        <button class="action-btn" onclick="toggleDetails(${q.id})"><i class="fa-solid fa-circle-info"></i> More</button>
+                        <button class="action-btn" onclick="handleVote(${q.id})"><i class="fa-solid fa-circle-up"></i> Vote</button>
+                        <button class="action-btn" onclick="toggleAns(${q.id})"><i class="fa-regular fa-comment"></i> Answer</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}  function handleVote(id) {
+        let db = getDB();
+        const idx = db.findIndex(q => q.id === id);
+        if (!db[idx].votedBy) db[idx].votedBy = [];
+
+        const votedIdx = db[idx].votedBy.indexOf(userObj.email);
+        if (votedIdx === -1) {
+            db[idx].votes++;
+            db[idx].votedBy.push(userObj.email);
+        } else {
+            db[idx].votes--;
+            db[idx].votedBy.splice(votedIdx, 1);
+        }
+        saveDB(db);
+        filterData(activeFilter);
+    }
+
+    function handleLike(id) {
+        let db = getDB();
+        const idx = db.findIndex(q => q.id === id);
+        if (!db[idx].likedBy) db[idx].likedBy = [];
+
+        const likedIdx = db[idx].likedBy.indexOf(userObj.email);
+        if (likedIdx === -1) {
+            db[idx].likedBy.push(userObj.email);
+        } else {
+            db[idx].likedBy.splice(likedIdx, 1);
+        }
+        saveDB(db);
+        filterData(activeFilter);
+    }
+
+    function toggleAns(id) {
+    const ansBox = document.getElementById(`ans-box-${id}`);
+    const ansList = document.getElementById(`ans-list-${id}`);
+    
+    // Toggle visibility
+    if (ansBox.style.display === "block") {
+        ansBox.style.display = "none";
+    } else {
+        ansBox.style.display = "block";
+        
+        // Load existing answers from the database
+        const db = JSON.parse(localStorage.getItem('forumDB')) || [];
+        const question = db.find(q => q.id === id);
+        const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+
+        if (question && question.answers) {
+            ansList.innerHTML = question.answers.map(a => {
+                // Find answerer's photo in the global users list
+                const ansUser = allUsers.find(u => 
+                    (u.email && a.email && u.email.toLowerCase() === a.email.toLowerCase()) ||
+                    (u.name && a.user && u.name.toLowerCase() === a.user.toLowerCase())
+                );
+                const ansPic = ansUser?.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
+                return `
+                <div style="display:flex; gap:10px; padding:10px; border-bottom:1px solid #f0f4f8; align-items: flex-start;">
+                    <img src="${ansPic}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
+                    <div style="background: #f7fafc; padding:8px 12px; border-radius:12px; flex:1;">
+                        <strong style="font-size:0.85rem; color:#2d3748;">${a.user}</strong>
+                        <p style="margin:2px 0 0 0; font-size:0.9rem; color:#4a5568;">${a.text}</p>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+}
+    function toggleDetails(id) {
+    const detailsBox = document.getElementById(`details-${id}`);
+    if (detailsBox.style.display === 'block') {
+        detailsBox.style.display = 'none';
+    } else {
+        detailsBox.style.display = 'block';
+    }
+}
+
+    // --- COMBINED SUBMIT ANSWER FUNCTION ---
+function submitAnswer(id) {
+    const inputField = document.getElementById(`input-${id}`);
+    const text = inputField.value.trim();
+    if (!text) return alert("Please type an answer first.");
+
+    // 1. Get the current user data safely
+    let currentUser = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!currentUser) return alert("Please log in to answer questions.");
+
+    let db = JSON.parse(localStorage.getItem('forumDB')) || [];
+    const idx = db.findIndex(q => q.id === id);
+    if (idx === -1) return;
+
+    // 2. Add the answer to the database with the user's details
+    db[idx].answers.push({ 
+        user: currentUser.name, 
+        email: currentUser.email, 
+        text: text,
+        date: new Date().toLocaleDateString()
+    });
+    localStorage.setItem('forumDB', JSON.stringify(db));
+    currentUser.ansCount = (currentUser.ansCount || 0) + 1;
+    localStorage.setItem('loggedInUser', JSON.stringify(currentUser));
+    inputField.value = ""; 
+    renderList(db); 
+    const ansBox = document.getElementById(`ans-box-${id}`);
+    ansBox.style.display = "block";
+    loadAnswers(id); 
+}
+function loadAnswers(id) {
+    const ansList = document.getElementById(`ans-list-${id}`);
+    const db = JSON.parse(localStorage.getItem('forumDB')) || [];
+    const question = db.find(q => q.id === id);
+    const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+
+    if (question && question.answers) {
+        ansList.innerHTML = question.answers.map(a => {
+            // Find the answerer's photo in the global users list
+            const ansUser = allUsers.find(u => 
+                (u.email && a.email && u.email.toLowerCase() === a.email.toLowerCase()) ||
+                (u.name && a.user && u.name.toLowerCase() === a.user.toLowerCase())
+            );
+            
+            const ansPic = ansUser?.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
+            return `
+            <div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #edf2f7; align-items: flex-start;">
+                <img src="${ansPic}" style="width:35px; height:35px; border-radius:50%; object-fit:cover; border: 1px solid #e2e8f0;">
+                <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:0.9rem; color:#2d3748;">${a.user}</strong>
+                        <span style="font-size:0.75rem; color:#a0aec0;">${a.date || ''}</span>
+                    </div>
+                    <p style="margin:4px 0 0 0; font-size:0.95rem; color:#4a5568; line-height:1.4;">${a.text}</p>
+                </div>
+            </div>`;
+        }).join('');
+    }
+}
+function submitQuestion() {
+    const title = document.getElementById('newTitle').value;
+    const body = document.getElementById('newBody').value;
+    const tagsRaw = document.getElementById('newTags').value;
+    if(!title || !tagsRaw) return alert("Please fill Title and Tags");
+
+    const newQ = {
+        id: Date.now(),
+        title: title,
+        body: body,
+        tags: tagsRaw.split(',').map(t => t.trim()),
+        votes: 0,
+        votedBy: [],
+        likedBy: [],
+        answers: [],
+        author: userObj.name,
+        email: userObj.email,
+        time: new Date().toLocaleString()
+    };
+
+    let db = getDB();
+    db.unshift(newQ);
+    saveDB(db);
+    showSection('list');
+}
+function showSection(section) {
+    const area = document.getElementById('dynamic-area');
+    if (section === 'list') {
+        document.getElementById('tab-nav').style.display = 'flex';
+        filterData('all');
+    } else {
+        document.getElementById('tab-nav').style.display = 'none';
+        area.innerHTML = `
+            <div class="view-box">
+                <h2>Ask Question</h2>
+                <input type="text" id="newTitle" class="ans-input" placeholder="Title">
+                <textarea id="newBody" class="ans-input" placeholder="Details" rows="4"></textarea>
+                <input type="text" id="newTags" class="ans-input" placeholder="Tags (comma separated)">
+                <button class="post-btn" onclick="submitQuestion()">Post</button>
+            </div>`;
+    }
+}
+function handleSearch() {
+    const val = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = getDB().filter(q => q.title.toLowerCase().includes(val));
+    renderList(filtered);
+}
+window.onload = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewMode = urlParams.get('view');
+    const action = localStorage.getItem('openForumAction');
+
+    if (viewMode === 'myhistory') {
+        viewMyQuestions();
+    } else if (action === 'ask') {
+        showSection('ask');
+        localStorage.removeItem('openForumAction');
+    } else {
+        filterData('all');
+    }
+};
+function viewMyQuestions() {
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    const forumDB = JSON.parse(localStorage.getItem('forumDB')) || [];
+    const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+    const elementsToHide = ['.sidebar', '#tab-nav', '.ask-btn', 'header p'];
+    elementsToHide.forEach(s => { 
+        const el = document.querySelector(s); 
+        if(el) el.style.display = 'none'; 
+    });
+    const mainHeading = document.querySelector('h1');
+    if (mainHeading) mainHeading.innerText = "My Question History";
+    const myData = forumDB.filter(q => q.email === user.email);
+    const area = document.getElementById('dynamic-area');
+    let historyHTML = `<button onclick="window.location.href='dashboard.html'" class="action-btn" style="margin-bottom:20px;">← Back to Dashboard</button>`;
+    if (myData.length === 0) {
+        area.innerHTML = historyHTML + `<p style="text-align:center; padding:20px;">You haven't posted any questions yet.</p>`;
+        return;
+    }
+    area.innerHTML = historyHTML + myData.map(q => {
+        const answers = q.answers || [];
+        const hasAnswers = answers.length > 0;
+        const statusHTML = hasAnswers 
+            ? `<span style="background:#c6f6d5; color:#22543d; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:bold;">${answers.length} ANSWERED</span>` 
+            : `<span style="background:#fee2e2; color:#991b1b; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:bold;">PENDING</span>`;
+        const answersHTML = answers.map(a => {
+            const ansUser = allUsers.find(u => u.email === a.email);
+            const ansPic = ansUser?.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+            
+            return `
+                <div style="display:flex; gap:10px; margin-top:10px; padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #edf2f7;">
+                    <img src="${ansPic}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
+                    <div style="flex:1;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong style="font-size:0.85rem;">${a.user}</strong>
+                            <small style="color:#a0aec0;">${a.date || ''}</small>
+                        </div>
+                        <p style="margin:4px 0 0 0; font-size:0.9rem; color:#4a5568;">${a.text}</p>
+                    </div>
+                </div>`;
+        }).join('');
+
+        return `
+            <div class="card" style="border-left: 6px solid ${hasAnswers ? '#10b981' : '#ef4444'}; margin-bottom:20px; padding:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <h3 style="margin:0; color:#2d3748; font-size:1.1rem;">${q.title}</h3>
+                    ${statusHTML}
+                </div>
+                
+                <p style="color:#718096; font-size:0.9rem; margin:10px 0;">${q.body || 'No details provided.'}</p>
+                
+                <div id="history-ans-list-${q.id}" style="margin-top:15px; border-top: 1px solid #f1f5f9; padding-top:10px;">
+                    <strong style="font-size:0.8rem; color:#64748b;">${hasAnswers ? 'Responses:' : 'No responses yet'}</strong>
+                    ${answersHTML}
+                </div>
+
+                <div style="margin-top:15px; text-align:right;">
+                    <small style="color:#cbd5e0; display:block; margin-bottom:5px;">Posted on ${q.time}</small>
+                    <button class="action-btn" onclick="window.location.href='forum.html?id=${q.id}'" style="font-size:0.8rem;">Go to Discussion</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+function updateQuestionCount() {
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    const forumDB = JSON.parse(localStorage.getItem('forumDB')) || [];
+    
+    if (user && user.email) {
+        const myQuestions = forumDB.filter(q => q.email === user.email);
+        const countDisplay = document.getElementById('q-count-display');
+        if (countDisplay) {
+            countDisplay.textContent = myQuestions.length;
+        }
+    }
+}
+updateQuestionCount();
+</script>
+</body>
+</html>

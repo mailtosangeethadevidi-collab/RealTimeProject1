@@ -1,0 +1,78 @@
+
+ :root { --bg-gradient: linear-gradient(135deg, #fef1f8 0%, #edf1fd 100%);
+--text-main: #111;--text-sub: #5f6368;--accent-purple: #814dff;
+--accent-blue: #4e73df;--grad-button: linear-gradient(90deg, #4e73df 0%, #814dff 100%);
+--card-bg: #ffffff;--shadow-md: 0 4px 20px rgba(0,0,0,0.08);}
+body {font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow-x: hidden;
+background-image: var(--bg-gradient);margin: 0;min-height: 100vh;
+display: flex;justify-content: center; align-items: center; color: var(--text-main);}
+.view {display: none; width: 100%;min-height: 100vh;  }
+.view:not(.hidden) {display: flex;justify-content: center;align-items: center;}
+#welcome-page:not(.hidden) {display: flex; flex-direction: column; text-align: center;}
+.hidden {display: none !important;}
+.welcome-container { max-width: 800px; margin: 0 auto;padding: 2rem;display: flex;
+    flex-direction: column;align-items: center;gap: 20px;}
+.header-pill {
+    background-color: transparent; color: var(--accent-blue);padding: 0;                   
+    font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 20px; display: block;font-weight: 700;}
+.welcome-left h1 {font-size: clamp(2.5rem, 5vw, 4rem);margin-top: 0;margin-bottom: 1rem;
+    line-height: 1.2;display: flex;flex-wrap: wrap;justify-content: center;gap: 15px;}
+.gradient-text {
+    background-image: var(--grad-button);-webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;display: inline;}
+.welcome-left p {color: var(--text-sub);font-size: 1.1rem;line-height: 1.6;
+    margin-bottom: 2.5rem;max-width: 600px; margin-left: auto;margin-right: auto;}
+.btn-group {display: flex;gap: 15px;justify-content: center;}
+.btn-grad-icon {
+    background-image: var(--grad-button); color: white; border: none;
+    padding: 12px 35px;border-radius: 8px;cursor: pointer;font-weight: bold;
+    font-size: 1rem;display: flex;align-items: center;gap: 10px;
+    transition: transform 0.2s;}
+.btn-grad-icon:hover {transform: translateY(-2px);}
+.btn-secondary-flat { background-color: white; color: #111; border: 1px solid #ddd;
+    padding: 12px 35px; border-radius: 8px; cursor: pointer;
+    font-weight: 500; transition: background 0.2s;}
+.btn-secondary-flat:hover {background-color: #f8f9fa;}
+.squared-card {
+    background: var(--card-bg);
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    text-align: center;
+    width: 90%;
+    max-width: 400px;}
+.profile-icon-placeholder {
+    width: 70px;
+    height: 70px;
+    background-color: #4e73df;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 1rem auto;
+    color: white;
+    font-size: 2rem;}
+.input-group {text-align: left;margin-bottom: 1rem;}
+.input-group label {display: block;font-size: 0.85rem;font-weight: 600;
+    color: var(--text-sub);margin-bottom: 5px;}
+.input-group input { width: 100%; padding: 12px; border: 1px solid #e0e6ed;
+    border-radius: 8px; box-sizing: border-box;}
+.btn-primary-grad {
+    background-image: var(--grad-button);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    margin-top: 10px;}
+.profile-icon-placeholder {
+    width: 70px; height: 70px; background-color: #4e73df; 
+    border-radius: 50%;display: flex;justify-content: center;
+    align-items: center;margin: 0 auto 1.5rem auto;color: white;
+    font-size: 2rem; /* Adjust this to make the icon larger or smaller */
+    box-shadow: 0 4px 10px rgba(78, 115, 223, 0.2);}
+.link { color: #1a73e8; cursor: pointer; font-weight: 600; text-decoration: none; }
+.back-link { display: block; margin-top: 1.5rem; font-size: 0.85rem; color: #777; }

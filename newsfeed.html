@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Feed | StudentConnect</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: #f4f7fa; color: #333; }
+        .navbar { background: white; border-bottom: 1px solid #eee; padding: 12px 5%; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+        .logo { font-weight: 700; color: #4db2ec; text-decoration: none; font-size: 1.3rem; }
+        .main-container { max-width: 800px; margin: 30px auto; padding: 0 20px; }
+        .create-post { background: white; border-radius: 24px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); margin-bottom: 30px; }
+        .post-input { width: 100%; border: 1px solid #edf2f7; border-radius: 12px; padding: 15px; min-height: 80px; resize: none; margin-bottom: 15px; }
+        .btn-post { background: linear-gradient(135deg, #4db2ec 0%, #845ef7 100%); color: white; border: none; padding: 12px 30px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        .feed-card { background: white; border-radius: 24px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.03); }
+        .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #dfe6e9; }
+        .user-info h4 { font-size: 1rem; color: #1e272e; }
+        .role-badge { background: #eef7fd; color: #4db2ec; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-left: 5px; }
+        
+        .post-image { width: 100%; max-height: 400px; object-fit: contain; border-radius: 15px; margin-top: 15px; background: #f8f9fa; }
+        .post-footer { border-top: 1px solid #f1f3f5; padding-top: 15px; display: flex; gap: 30px; color: #666; font-size: 0.9rem; }
+        .footer-item { cursor: pointer; }
+        .footer-item:hover { color: #845ef7; }
+        
+        /* New Styles for Links and Comments */
+        .post-link { color: #0a66c2; text-decoration: none; font-weight: 500; }
+        .comment-section { margin-top: 15px; display: none; border-top: 1px solid #eee; padding-top: 10px; }
+        .comment-input-area { display: flex; gap: 10px; margin-bottom: 10px; }
+        .comment-input { flex: 1; padding: 8px 15px; border: 1px solid #ddd; border-radius: 20px; font-size: 0.85rem; outline: none; }
+        .comment-item { background: #f0f2f5; padding: 8px 12px; border-radius: 12px; margin-bottom: 5px; font-size: 0.85rem; }
+        
+        #preview { margin-bottom: 10px; } 
+        #preview img { width: 100px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <header class="navbar">
+        <nav><a href="dashboard.html" class="logo">StudentConnect</a></nav>
+        <nav><a href="dashboard.html" style="text-decoration:none; color:#666;">Dashboard</a></nav>
+    </header>
+    <main class="main-container">
+        <section class="create-post">
+            <textarea id="postText" class="post-input" placeholder="Place Achievements, Certifications, Updates and Announcements...."></textarea>
+            <div id="preview"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="cursor:pointer; color:#4db2ec; font-weight:600;">
+                    <i class="fa-regular fa-image"></i> Add Image
+                    <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="previewImage(event)">
+                </label>
+                <button class="btn-post" onclick="submitPost()">Post</button>
+            </div>
+        </section>
+
+        <div id="feedList"></div> 
+        
+    </main>
+
+<script>
+let selectedImage = null;
+
+function linkify(text) {
+    const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    return text.replace(urlPattern, '<a href="$1" target="_blank" class="post-link">$1</a>');
+}
+
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imgElement = new Image();
+            imgElement.src = e.target.result;
+            
+            imgElement.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600; 
+                const scaleSize = MAX_WIDTH / imgElement.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = imgElement.height * scaleSize;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+
+                selectedImage = canvas.toDataURL('image/jpeg', 0.7);
+                document.getElementById('preview').innerHTML = `<img src="${selectedImage}" style="width:80px; height:80px; object-fit:cover; border-radius:10px;">`;
+            };
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function submitPost() {
+    const text = document.getElementById('postText').value.trim();
+    const userObj = JSON.parse(localStorage.getItem('loggedInUser')) || {};
+
+    if (!text && !selectedImage) {
+        alert("Please write something or add an image!");
+        return;
+    }
+
+    const userYear = prompt("Which year are you in?");
+    if (!userYear) return;
+
+    const newPost = {
+        id: Date.now(),
+        author: userObj.name || "Anonymous",
+        email: userObj.email,
+        content: text,
+        image: selectedImage, 
+        time: new Date().toLocaleString(),
+        year: userYear,
+        likes: 0,
+        likedBy: [],
+        comments: []
+    };
+
+    let posts = JSON.parse(localStorage.getItem('posts')) || [];
+    posts.unshift(newPost);
+    
+    try {
+        localStorage.setItem('posts', JSON.stringify(posts));
+        document.getElementById('postText').value = '';
+        document.getElementById('preview').innerHTML = '';
+        selectedImage = null;
+        displayPosts();
+    } catch (e) {
+        alert("Storage full! Try a smaller image.");
+    }
+}
+
+function handleLike(postId) {
+    let posts = JSON.parse(localStorage.getItem('posts')) || [];
+    const postIndex = posts.findIndex(p => p.id === postId);
+    const userObj = JSON.parse(localStorage.getItem('loggedInUser')) || { email: "guest@gmail.com" };
+    
+    if (postIndex === -1) return;
+    if (!posts[postIndex].likedBy) posts[postIndex].likedBy = [];
+
+    const likedIndex = posts[postIndex].likedBy.indexOf(userObj.email);
+    if (likedIndex === -1) {
+        posts[postIndex].likedBy.push(userObj.email);
+    } else {
+        posts[postIndex].likedBy.splice(likedIndex, 1);
+    }
+
+    posts[postIndex].likes = posts[postIndex].likedBy.length;
+    localStorage.setItem('posts', JSON.stringify(posts));
+    displayPosts();
+}
+
+function toggleComments(postId) {
+    const section = document.getElementById(`comments-${postId}`);
+    section.style.display = section.style.display === "none" ? "block" : "none";
+}
+
+// --- UPDATED DISPLAY LOGIC ---
+function displayPosts() {
+    const posts = JSON.parse(localStorage.getItem('posts')) || [];
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser')) || {};
+    const allUsers = JSON.parse(localStorage.getItem('users')) || []; 
+    const feed = document.getElementById('feedList');
+    
+    if (!feed) return; 
+    feed.innerHTML = "";
+
+    posts.sort((a, b) => b.id - a.id);
+
+    posts.forEach(post => {
+        // 1. DYNAMIC LOOKUP (The most important part)
+        // We look for the author in the global list to get the UPDATED photo
+        let authorProfile = allUsers.find(u => u.email === post.email);
+        
+        // If it's you, always grab the latest photo from your current session
+        if (!authorProfile && loggedInUser.email === post.email) {
+            authorProfile = loggedInUser;
+        }
+
+        // 2. IMAGE RESOLUTION
+        // We prioritize authorProfile.profilePic. 
+        // We ONLY use post.authorPic as a last-resort fallback.
+        const latestAvatar = (authorProfile && authorProfile.profilePic) 
+            ? authorProfile.profilePic 
+            : (post.authorPic ? post.authorPic : 'https://cdn-icons-png.flaticon.com/512/149/149071.png');
+            
+        const isMe = loggedInUser && post.email === loggedInUser.email;
+        const displayName = isMe ? "You" : (authorProfile ? authorProfile.name : post.author);
+        const profileLink = isMe ? "profile.html" : `user-profile.html?email=${post.email}`;
+
+        const postHTML = `
+        <div class="feed-card">
+            <div class="post-header">
+                <img src="${latestAvatar}" 
+                     onclick="window.location.href='${profileLink}'" 
+                     style="width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer;">
+                <div class="user-info">
+                    <h4>
+                        <span onclick="window.location.href='${profileLink}'" style="cursor:pointer; color: #0a66c2;">
+                            ${displayName}
+                        </span>
+                        <span class="role-badge">${post.year || 'Student'}</span>
+                    </h4>
+                    <p style="font-size:0.8rem; color:#666;">${post.time}</p>
+                </div>
+            </div>
+            <div class="post-content">${linkify(post.content)}</div>
+            ${post.image ? `<img src="${post.image}" class="post-image" style="width:100%; border-radius:10px;">` : ''}
+            <div class="post-footer">
+                <div class="footer-item" onclick="handleLike(${post.id})">
+                    <i class="fa-regular fa-thumbs-up"></i> ${post.likes || 0} Likes
+                </div>
+            </div>
+        </div>`;
+        feed.insertAdjacentHTML('beforeend', postHTML);
+    });
+}
+window.onload = displayPosts;
+</script>
+</body>
+</html>

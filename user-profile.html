@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile | StudentConnect</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Reusing your consistent theme styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: #f4f7fa; color: #333; }
+        .navbar { background: white; border-bottom: 1px solid #eee; padding: 12px 5%; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+        .logo { font-weight: 700; color: #4db2ec; text-decoration: none; font-size: 1.3rem; }
+        .main-container { max-width: 800px; margin: 30px auto; padding: 0 20px; }
+        
+        /* Profile Header Style */
+        .profile-card { background: white; border-radius: 24px; padding: 40px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.04); margin-bottom: 30px; }
+        .big-avatar { width: 100px; height: 100px; border-radius: 50%; background: #dfe6e9; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #b2bec3; }
+        
+        /* Feed Styles (Same as Newsfeed) */
+        .feed-card { background: white; border-radius: 24px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.03); }
+        .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #dfe6e9; }
+        .role-badge { background: #eef7fd; color: #4db2ec; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-left: 5px; }
+        .post-image { width: 100%; max-height: 400px; object-fit: contain; border-radius: 15px; margin-top: 15px; background: #f8f9fa; }
+        .post-link { color: #0a66c2; text-decoration: none; font-weight: 500; }
+        .big-avatar {
+    width: 120px;
+    height: 120px;
+    background: #e0e0e0;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* This keeps the image inside the circle */
+    border: 4px solid white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.big-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Prevents stretching */
+}
+    </style>
+</head>
+<body>
+
+    <header class="navbar">
+    <a href="newsfeed.html" class="logo">StudentConnect</a>
+    <nav><a href="newsfeed.html" style="text-decoration:none; color:#666;"><i class="fa-solid fa-arrow-left"></i> Back to Feed</a></nav>
+</header>
+
+<main class="main-container">
+    <section class="profile-card">
+        <div class="big-avatar" id="avatarContainer">
+            <img id="mainProfilePic" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+            <i class="fa-solid fa-user" id="defaultIcon"></i>
+        </div>
+        <h2 id="userNameDisplay">Loading...</h2>
+        <p id="userEmailDisplay" style="color:#888; font-size:0.9rem;"></p>
+        <p style="margin-top:10px; font-weight:600; color:#4db2ec;">All Activity</p>
+    </section>
+
+    <div id="userPostsList"></div>
+</main>
+<script>
+function linkify(text) {
+    const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    return text.replace(urlPattern, '<a href="$1" target="_blank" class="post-link">$1</a>');
+}
+
+function loadProfilePosts() {
+    const params = new URLSearchParams(window.location.search);
+    const targetEmail = params.get('email');
+    
+    // 1. Get the target user's permanent record
+    const userData = JSON.parse(localStorage.getItem(targetEmail));
+    const allPosts = JSON.parse(localStorage.getItem('posts')) || [];
+    const userPosts = allPosts.filter(p => p.email === targetEmail);
+    const listDiv = document.getElementById('userPostsList');
+
+    if (userData) {
+        // 2. Update the Big Profile Picture
+        const mainPic = document.getElementById('mainProfilePic');
+        const defaultIcon = document.getElementById('defaultIcon');
+        
+        if (userData.profilePic) {
+            mainPic.src = userData.profilePic;
+            mainPic.style.display = 'block';
+            if (defaultIcon) defaultIcon.style.display = 'none';
+        }
+
+        document.getElementById('userNameDisplay').innerText = userData.name;
+        document.getElementById('userEmailDisplay').innerText = targetEmail;
+
+        // 3. Render Posts
+        if (userPosts.length > 0) {
+            listDiv.innerHTML = "";
+            userPosts.forEach(post => {
+                const postHTML = `
+                <div class="feed-card">
+                    <div class="post-header">
+                        <div class="user-avatar">
+                            <img src="${userData.profilePic || ''}" 
+                                 style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; 
+                                 display: ${userData.profilePic ? 'block' : 'none'};">
+                        </div>
+                        <div class="user-info">
+                            <h4>${post.author} <span class="role-badge">${post.year || ''}</span></h4>
+                            <p style="font-size:0.8rem; color:#aaa;">${post.time}</p>
+                        </div>
+                    </div>
+                    <div class="post-content">${linkify(post.content)}</div>
+                    ${post.image ? `<img src="${post.image}" class="post-image">` : ''}
+                </div>`;
+                listDiv.insertAdjacentHTML('beforeend', postHTML);
+            });
+        }
+    } else {
+        document.getElementById('userNameDisplay').innerText = "User Not Found";
+    }
+}
+
+window.onload = loadProfilePosts;
+</script>
+</body>
+</html>
