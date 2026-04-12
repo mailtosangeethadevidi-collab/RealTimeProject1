@@ -6,23 +6,39 @@ function showPage(pageId) {
     const targetPage = document.getElementById(pageId);
     if (targetPage) {
         targetPage.classList.remove('hidden');
-    }}
+        // If it's the welcome page, ensure flex layout is preserved
+        if(pageId === 'welcome-page') targetPage.classList.add('welcome-container');
+    }
+}
+// Map showView to showPage for compatibility
+function showView(id) { showPage(id); }
 const regForm = document.getElementById('registerForm');
 if (regForm) {
     regForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const name = document.getElementById('regName').value;
-        const email = document.getElementById('regEmail').value;
-        const pass = document.getElementById('regPass').value;
+        const name = document.getElementById('regName').value.trim();
+        const email = document.getElementById('regEmail').value.trim().toLowerCase();
+        const password = document.getElementById('regPass').value.trim(); // Changed 'pass' to 'password'
+
         if (!email.includes('@')) {
-            alert("Please enter a valid college email address.");
-            return;}
-        if (localStorage.getItem(email)) {
-            alert("An account with this email already exists. Please login.");
+            return alert("Please enter a valid college email address.");
+        }
+
+        // Always work with the 'users' array
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+
+        if (users.some(u => u.email === email)) {
+            alert("An account with this email already exists.");
             showPage('login-page');
-            return;}
-        const userData = { name, email, pass };
-        localStorage.setItem(email, JSON.stringify(userData));
+            return;
+        }
+
+        const userData = { name, email, password };
+        users.push(userData);
+        
+        // Save to the central 'users' list
+        localStorage.setItem('users', JSON.stringify(users));
+        
         alert("Account created successfully! Please login.");
         regForm.reset();
         showPage('login-page');
@@ -32,41 +48,32 @@ const loginForm = document.getElementById('loginForm');
 if (loginForm) {
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const email = document.getElementById('loginEmail').value.trim();
-        const pass = document.getElementById('loginPass').value;
-        const storedData = localStorage.getItem(email);
-        if (storedData) {
-            const user = JSON.parse(storedData);
-            if (user.pass === pass) {
-                let users = JSON.parse(localStorage.getItem('users')) || [];
-                const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-                const userEntry = {
-                    name: user.name,
-                    email: email,
-                    profilePic: user.profilePic || user.image || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
-                };
+        
+        // 1. Get input values
+        const emailInput = document.getElementById('loginEmail').value.trim().toLowerCase();
+        const passInput = document.getElementById('loginPass').value;
 
-                if (userIndex !== -1) {
-                    // Update existing entry to ensure the photo is the latest one
-                    users[userIndex] = userEntry;
-                } else {
-                    // Add as a new entry if they aren't in the global list yet
-                    users.push(userEntry);
-                }
-                
-                localStorage.setItem('users', JSON.stringify(users));
+        // 2. Pull the central 'users' database
+        const users = JSON.parse(localStorage.getItem('users')) || [];
 
-                // 2. Save the session for the current logged-in user
-                // We save the 'userEntry' version to ensure session data matches the phonebook
-                localStorage.setItem('loggedInUser', JSON.stringify(userEntry));
-                
-                // 3. Redirect to dashboard
-                window.location.href = 'dashboard.html';
-            } else {
-                alert("Incorrect password.");
-            }
+        // 3. Find user in the central array
+        // FIX: We check '.password' instead of '.pass' to match the Reset function
+        const userMatch = users.find(u => u.email.toLowerCase() === emailInput && u.password === passInput);
+
+        if (userMatch) {
+            // 4. Create the session object
+            const userSession = {
+                name: userMatch.name,
+                email: userMatch.email,
+                profilePic: userMatch.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
+            };
+
+            // 5. Save session and redirect
+            localStorage.setItem('loggedInUser', JSON.stringify(userSession));
+            window.location.href = 'dashboard.html';
         } else {
-            alert("Email not found. Please create an account first.");
+            // If the email exists but password is wrong OR if user doesn't exist
+            alert("Invalid email or password.");
         }
     });
 }
@@ -102,7 +109,7 @@ function handleLogout() {
         localStorage.removeItem('loggedInUser');
         
         // 2. Redirect to the login or index page
-        window.location.href = 'login.html'; 
+        window.location.href = 'index.html'; 
     }
 }
 
@@ -247,33 +254,23 @@ function showView(viewId) {
 
 // Logic to handle the password change
 function handlePasswordReset() {
-    const emailInput = document.getElementById('reset-email').value.trim().toLowerCase();
-    const newPassword = document.getElementById('reset-new-password').value.trim();
+    const email = document.getElementById('reset-email').value.trim().toLowerCase();
+    const newPass = document.getElementById('reset-new-password').value.trim();
 
-    if (!emailInput || !newPassword) return alert("Fill all fields");
+    if (!email || !newPass) return alert("Please fill all fields.");
 
     let users = JSON.parse(localStorage.getItem('users')) || [];
-    
-    // Check if the email exists at all
-    const exists = users.some(u => u.email.toLowerCase() === emailInput);
-    if (!exists) return alert("Email not found!");
+    const userIndex = users.findIndex(u => u.email === email);
 
-    // NEW LOGIC: Update ALL entries with this email (to clear duplicates)
-    users = users.map(user => {
-        if (user.email.toLowerCase() === emailInput) {
-            return { ...user, password: newPassword };
-        }
-        return user;
-    });
-
-    // Save the cleaned-up database
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    // Clear the current session
-    localStorage.removeItem('loggedInUser');
-
-    alert("Password updated for all instances of this account!");
-    showView('login-page');
+    if (userIndex !== -1) {
+        users[userIndex].password = newPass;
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.removeItem('loggedInUser'); // Clear old session
+        alert("Password updated! Try logging in now.");
+        showPage('login-page');
+    } else {
+        alert("Email not found in our records.");
+    }
 }
 function handleLogin() {
     const emailInput = document.getElementById('login-email').value.trim().toLowerCase();
