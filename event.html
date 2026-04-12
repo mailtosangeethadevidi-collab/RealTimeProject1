@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudentConnect - Events</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4a90e2; --bg: #f7fafc; --text: #2d3748; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: var(--text); }
+
+        /* Navigation */
+        .btn-discussion {
+    background: white;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 10px;
+    transition: 0.3s;
+}
+
+.btn-discussion:hover {
+    background: #ebf8ff;
+}
+
+.discussion-panel {
+    display: none; /* Hidden by default */
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #edf2f7;
+}
+        nav { 
+            background: white; padding: 15px 50px; display: flex; 
+            justify-content: space-between; align-items: center; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+        }
+        .btn-dash { 
+            background: var(--primary); color: white; text-decoration: none; 
+            padding: 10px 20px; border-radius: 8px; font-weight: 600; 
+        }
+
+        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        
+        /* Header Section */
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .btn-create { background: #48bb78; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        /* Event Row Item */
+        .event-item { 
+            background: white; padding: 25px; border-radius: 12px; 
+            margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .event-main-info { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #edf2f7; padding-bottom: 15px; }
+        .event-date-badge { background: #ebf8ff; color: #3182ce; padding: 5px 12px; border-radius: 6px; font-size: 0.9rem; font-weight: bold; }
+        .joined-count { color: #718096; font-size: 0.9rem; margin-top: 5px; }
+
+        /* Q&A Section inside Event */
+        .event-qa { margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; }
+        .qa-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 10px; display: block; }
+        .ans-item { padding: 8px 0; border-top: 1px solid #e2e8f0; font-size: 0.9rem; color: #4a5568; }
+        .ans-item:first-child { border-top: none; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 400px; }
+        input, select, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">StudentConnect</div>
+        <a href="dashboard.html" class="btn-dash"><i class="fa-solid fa-house"></i> Dashboard</a>
+    </nav>
+
+   <div class="container">
+    <div class="page-header">
+        <h1>Campus Events & Drives</h1>
+        <button class="btn-create" onclick="openModal()"><i class="fa-solid fa-plus"></i> Create Event</button>
+    </div>
+    <div id="events-list"></div>
+</div>
+
+<div class="modal" id="eventModal">
+    <div class="modal-content">
+        <h2 style="margin-top:0">Post New Event</h2>
+        <label>Event Name</label>
+        <input type="text" id="mTitle" placeholder="e.g. TCS Recruitment Drive">
+        
+        <label>Event Description</label>
+        <textarea id="mDesc" placeholder="Describe the event, eligibility, or agenda..." style="height: 100px;"></textarea>
+        
+        <label>Event Date</label>
+        <input type="date" id="mDate">
+        
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="saveEvent()" style="flex:1; background: var(--primary); color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">Save Event</button>
+            <button onclick="closeModal()" style="flex:1; background:#edf2f7; border:none; padding:12px; border-radius:8px; cursor:pointer;">Cancel</button>
+        </div>
+    </div>
+</div>
+<script> // 1. Get Logged In User (Only declare once)
+const user = JSON.parse(localStorage.getItem('loggedInUser')) || { name: "Guest", email: "" };
+
+// 2. Modal Controls
+function openModal() { 
+    document.getElementById('eventModal').style.display = 'flex'; 
+}
+
+function closeModal() { 
+    document.getElementById('eventModal').style.display = 'none'; 
+    // Clear inputs after closing
+    document.getElementById('mTitle').value = '';
+    document.getElementById('mDesc').value = '';
+    document.getElementById('mDate').value = '';
+}
+
+// 3. Save Event to LocalStorage
+function saveEvent() {
+    const title = document.getElementById('mTitle').value;
+    const desc = document.getElementById('mDesc').value;
+    const date = document.getElementById('mDate').value;
+
+    if(!title || !date || !desc) {
+        return alert("Please fill Title, Description, and Date");
+    }
+
+    let db = JSON.parse(localStorage.getItem('eventsDB')) || [];
+    
+    const newEvent = {
+        id: Date.now(),
+        title: title,
+        description: desc,
+        date: date,
+        joinedBy: [],
+        discussions: [] 
+    };
+
+    db.unshift(newEvent); // Add to top of list
+    localStorage.setItem('eventsDB', JSON.stringify(db));
+    
+    closeModal();
+    renderEvents();
+}
+
+// 4. Render the List of Events
+function renderEvents() {
+    const db = JSON.parse(localStorage.getItem('eventsDB')) || [];
+    const list = document.getElementById('events-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    db.forEach(ev => {
+        const isJoined = ev.joinedBy.includes(user.email);
+        
+        list.innerHTML += `
+            <div class="event-item" style="background:white; padding:25px; border-radius:12px; margin-bottom:20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div class="event-main-info" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1">
+                        <h2 style="margin:0; color:#2d3748;">${ev.title}</h2>
+                        <p style="color:#718096; font-size:0.95rem; margin:8px 0;">${ev.description}</p>
+                        <div style="display:flex; gap:15px; font-size:0.85rem; color:#a0aec0;">
+                            <span><i class="fa-solid fa-users"></i> ${ev.joinedBy.length} Registered</span>
+                            <span><i class="fa-regular fa-calendar"></i> ${ev.date}</span>
+                        </div>
+                        <button class="btn-discussion" onclick="toggleDiscussion(${ev.id})">
+                            <i class="fa-solid fa-comments"></i> Student Discussion
+                        </button>
+                    </div>
+                    <div style="text-align:right;">
+                        <button onclick="toggleJoin(${ev.id})" style="cursor:pointer; border:none; background:${isJoined ? '#fed7d7' : '#4a90e2'}; color:${isJoined ? '#c53030' : 'white'}; padding:12px 20px; border-radius:8px; font-weight:bold;">
+                            ${isJoined ? 'Unregister' : 'Register Now'}
+                        </button>
+                    </div>
+                </div>
+
+                <div id="disc-panel-${ev.id}" class="discussion-panel">
+                    <div style="display:flex; gap:10px; margin-bottom:20px;">
+                        <input type="text" id="new-q-${ev.id}" placeholder="Ask a question..." style="flex:1; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+                        <button onclick="askQuestion(${ev.id})" style="background:#48bb78; color:white; border:none; padding:0 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Post</button>
+                    </div>
+
+                    <div id="qa-list-${ev.id}">
+                        ${ev.discussions.length === 0 ? '<p style="color:#a0aec0; font-size:0.85rem; text-align:center;">No questions yet.</p>' : 
+                            ev.discussions.map((d, dIdx) => `
+                                <div style="background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:10px;">
+                                    <div style="font-weight:600; font-size:0.9rem; color:#2d3748;">${d.user}: <span style="font-weight:400;">${d.text}</span></div>
+                                    <div style="margin-left:20px; margin-top:8px;">
+                                        ${d.replies.map(r => `<div style="font-size:0.85rem; color:#718096; margin-bottom:3px;"><strong>Reply:</strong> ${r}</div>`).join('')}
+                                        <div style="display:flex; gap:5px; margin-top:5px;">
+                                            <input type="text" id="reply-to-${ev.id}-${dIdx}" placeholder="Write a reply..." style="font-size:0.8rem; padding:5px; flex:1; border:1px solid #e2e8f0; border-radius:4px;">
+                                            <button onclick="replyToQuestion(${ev.id}, ${dIdx})" style="background:#edf2f7; border:none; padding:5px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer;">Reply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// 5. Interaction Functions
+function toggleJoin(id) {
+    let db = JSON.parse(localStorage.getItem('eventsDB')) || [];
+    const idx = db.findIndex(e => e.id === id);
+    if(idx === -1) return;
+
+    if(db[idx].joinedBy.includes(user.email)) {
+        db[idx].joinedBy = db[idx].joinedBy.filter(e => e !== user.email);
+    } else {
+        db[idx].joinedBy.push(user.email);
+    }
+    localStorage.setItem('eventsDB', JSON.stringify(db));
+    renderEvents();
+}
+
+function askQuestion(eventId) {
+    const input = document.getElementById(`new-q-${eventId}`);
+    if(!input.value) return;
+
+    let db = JSON.parse(localStorage.getItem('eventsDB'));
+    const idx = db.findIndex(e => e.id === eventId);
+    
+    db[idx].discussions.push({
+        user: user.name,
+        text: input.value,
+        replies: []
+    });
+
+    localStorage.setItem('eventsDB', JSON.stringify(db));
+    renderEvents();
+}
+
+function replyToQuestion(eventId, qIdx) {
+    const input = document.getElementById(`reply-to-${eventId}-${qIdx}`);
+    if(!input.value) return;
+
+    let db = JSON.parse(localStorage.getItem('eventsDB'));
+    const idx = db.findIndex(e => e.id === eventId);
+    
+    db[idx].discussions[qIdx].replies.push(input.value);
+    
+    localStorage.setItem('eventsDB', JSON.stringify(db));
+    renderEvents();
+}
+
+// 6. Run on Load
+document.addEventListener('DOMContentLoaded', renderEvents);
+function toggleDiscussion(eventId) {
+    const panel = document.getElementById(`disc-panel-${eventId}`);
+    if (panel.style.display === "block") {
+        panel.style.display = "none";
+    } else {
+        panel.style.display = "block";
+    }
+}
+ </script>
+</body>
+</html>
