@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudentConnect Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.2css.css">
+</head>
+<body>
+   <div id="reset-page" class="view hidden">
+    <div class="squared-card">
+        <div class="profile-icon-placeholder">
+            <i class="fa-solid fa-user-plus"></i></div>
+        <h2>Reset Password</h2>
+        <p style="color: var(--text-sub); margin-bottom: 20px;">Enter your email to update your credentials.</p>
+         <div class="input-group">
+            <label>Registered Email</label>
+            <input type="email" id="reset-email" placeholder="name@example.com"></div>
+        <div class="input-group">
+            <label>New Password</label>
+            <input type="password" id="reset-new-password" placeholder="At least 8 characters"></div>
+         <button class="btn-primary-grad" onclick="handlePasswordReset()">Update Password</button>
+        <a href="#" class="back-link" onclick="showView('login-page')">← Back to Login</a></div></div>
+   <div id="welcome-page" class="view welcome-container">
+        <div class="welcome-left">
+            <div class="header-pill">
+             <h1>Welcome to Student Interaction Potal</h1></div>
+            <h1> Connecting<span class="gradient-text"> Seniors <span style="color: black;">&</span> Juniors</h1>
+            <p style="color: black;">A dedicated space for mentorship, resource sharing, and building a stronger campus
+                 community. Bridge the gap between batches today!</p>
+            <div class="btn-group">
+                <button onclick="showPage('register-page')" class="btn-grad-icon">
+                    Get Started <span class="arrow">→</span>
+                </button>
+         <button onclick="showPage('login-page')" class="btn-secondary-flat">Login</button> </div></div></div>
+     <div id="login-page" class="view hidden center-flex">
+        <div class="squared-card auth-card">
+            <div class="auth-icon-container">
+                <div class="profile-icon-placeholder">
+                    <i class="fa-solid fa-user"></i> </div></div>
+            <h2>Welcome Back</h2>
+            <p class="auth-subtitle">Login to access your student portal</p>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="loginEmail">Email Address / Enrollment ID</label>
+                    <input type="email" id="loginEmail" placeholder="name@college.edu" required></div>
+                <div class="input-group">
+                    <label for="loginPass">Security Password</label>
+                    <input type="password" id="loginPass" placeholder="••••••••" required></div>
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox"> Save Information
+                    </label>
+                    <span class="link" onclick="showView('reset-page')" style="cursor: pointer; color: var(--accent-blue);
+                     font-weight: 600;">Forgot?</span></div>
+                   <button type="submit" class="btn-primary-grad">Login to Dashboard</button></form>
+            <p class="auth-footer">Don't have an account? <span class="link" onclick="showPage('register-page')">Sign up</span></p>
+            <span class="link back-link" onclick="showPage('welcome-page')">← Return to Welcome Page</span></div></div>
+     <div id="register-page" class="view hidden center-flex">
+        <div class="squared-card auth-card">
+            <div class="auth-icon-container">
+                <div class="profile-icon-placeholder">
+                    <i class="fa-solid fa-user-plus"></i></div></div>
+            <h2>Join the Portal</h2>
+            <p class="auth-subtitle">Create an account to start connecting</p>
+            <form id="registerForm">
+                <div class="input-group">
+                    <label for="regName">Full Name</label>
+                    <input type="text" id="regName" placeholder="Your Name" required></div>
+                <div class="input-group">
+                    <label for="regEmail">College Email Address</label>
+                    <input type="email" id="regEmail" placeholder="name@college.edu" required> </div>
+                <div class="input-group">
+                    <label for="regPass">Create Security Password</label>
+                    <input type="password" id="regPass" placeholder="••••••••" required> </div>
+                <button type="submit" class="btn-primary-grad">Register Account</button></form>
+            <p class="auth-footer">Already have an account? <span class="link" onclick="showPage('login-page')">Login</span></p>
+            <span class="link back-link" onclick="showPage('welcome-page')">← Return to Welcome Page</span> </div></div>
+          <div id="dashboard-page" class="view hidden container">
+         <main class="dash-content">
+            <button onclick="logout()" class="btn-secondary">Logout</button>  </main></div>
+ <script src="script.js"></script></body></html>
+
