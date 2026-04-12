@@ -74,11 +74,11 @@
 
 <div class="container">
     <div class="top-nav">
-        <a href="dashboard.html" class="home-link">DiscussionForum</a>
+        <a href="dashboard.html" class="home-link">Dashboard</a>
         <button class="ask-btn" onclick="showSection('ask')">+ Ask Question</button>
     </div>
     <header>
-        <h1>Dashboard</h1>
+        <h1>Discussion Forum</h1>
         <p>Post questions and get answers from the community.</p>
     </header>
     <div class="search-container" id="search-bar-ui">
@@ -94,8 +94,8 @@
             <div id="dynamic-area"></div>
         </main>
         <aside class="sidebar">
-            <h3>Community Stats</h3>
-            <p>Join 5,000+ students sharing knowledge daily.</p>
+            <h3>Community Status</h3>
+            <p>Learn, share, and grow with peer-to-peer collaboration.</p>
         </aside>
     </div>
 </div>
@@ -108,23 +108,41 @@
     function saveDB(data) {
         localStorage.setItem('forumDB', JSON.stringify(data));
     }
-    function filterData(cat) {
-        activeFilter = cat;
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('tab-' + cat).classList.add('active');
-        let data = getDB();
-        if (cat === 'unanswered') {
-            data = data.filter(q => q.answers.length === 0);
-        } else if (cat === 'answered') {
-            data = data.filter(q => q.answers.length > 0);
-        } else if (cat === 'popular') {
-            data = data.sort((a, b) => b.votes - a.votes).slice(0, 5);
-        }
-        data.sort((a, b) => b.votes - a.votes);
-        renderList(data);
+  function filterData(cat) {
+    activeFilter = cat;
+    
+    // UI: Update tab active state
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    const activeTab = document.getElementById('tab-' + cat);
+    if (activeTab) activeTab.classList.add('active');
+
+    let data = getDB();
+
+    if (cat === 'all') {
+        // THIS IS THE FIX: 
+        // We sort by ID here so "All Questions" always shows newest on top
+        data.sort((a, b) => b.id - a.id);
+    } 
+    else if (cat === 'popular') {
+        // We sort by VOTES here so "Popular" shows highest votes on top
+        data.sort((a, b) => (b.votes || 0) - (a.votes || 0));
+    } 
+    else if (cat === 'unanswered') {
+        data = data.filter(q => !q.answers || q.answers.length === 0);
+        data.sort((a, b) => b.id - a.id); // Newest unanswered on top
     }
- function renderList(data) {
-    const area = document.getElementById('dynamic-area');
+     else if (cat === 'answered') {
+        // Optional: Filter for questions that HAVE answers
+        data = data.filter(q => q.answers && q.answers.length > 0);
+        data.sort((a, b) => b.id - a.id);
+    }
+    // Now send the ALREADY SORTED data to renderList
+    renderList(data);
+}
+ function renderList(data) {  
+   // const sortedData = [...data].sort((a, b) => b.id - a.id);
+   
+   const area = document.getElementById('dynamic-area');
     const allUsers = JSON.parse(localStorage.getItem('users')) || [];
     const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser')) || {};
     if (data.length === 0) {
@@ -349,6 +367,7 @@ function submitQuestion() {
     const title = document.getElementById('newTitle').value;
     const body = document.getElementById('newBody').value;
     const tagsRaw = document.getElementById('newTags').value;
+    
     if(!title || !tagsRaw) return alert("Please fill Title and Tags");
 
     const newQ = {
@@ -366,9 +385,14 @@ function submitQuestion() {
     };
 
     let db = getDB();
-    db.unshift(newQ);
+    db.unshift(newQ); // Adds the new question to the top of the array
     saveDB(db);
-    showSection('list');
+
+    // --- ADDED HERE ---
+    filterData('all'); 
+    // This refreshes the UI and ensures the 'All' tab is active and sorted by newest.
+
+    showSection('list'); // Switches the view back to the forum feed
 }
 function showSection(section) {
     const area = document.getElementById('dynamic-area');
