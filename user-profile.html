@@ -44,6 +44,11 @@
     height: 100%;
     object-fit: cover; /* Prevents stretching */
 }
+#chatModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+.chat-container { width: 350px; height: 450px; background: white; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+#chatBox { flex: 1; padding: 15px; overflow-y: auto; background: #f7f9fc; }
+.chat-input-area { display: flex; padding: 10px; gap: 5px; border-top: 1px solid #eee; }
+.chat-input-area input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
     </style>
 </head>
 <body>
@@ -65,29 +70,62 @@
     </section>
 
     <div id="userPostsList"></div>
+
 </main>
+<div id="chatModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center; font-family: 'Segoe UI', sans-serif; backdrop-filter: blur(2px);">
+    <div style="width:550px; background:white; border-radius:20px; overflow:hidden; display:flex; flex-direction:column; height:650px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border: 1px solid #e2e8f0;">
+        
+        <div style="padding:20px; background:#4a90e2; color:white; display:flex; justify-content:space-between; align-items:center;">
+            <span id="chatTitle" style="font-weight:bold; font-size:1.1rem;">Chat</span>
+            <span onclick="closeChat()" style="cursor:pointer; font-size:28px; line-height:1; opacity: 0.8;">&times;</span>
+        </div>
+
+        <div id="chatBox" style="flex:1; padding:20px; overflow-y:auto; background:#f8fafc; display:flex; flex-direction:column; gap:15px;">
+            </div>
+
+        <div style="padding:20px; display:flex; gap:12px; border-top: 1px solid #edf2f7; background: white;">
+            <input type="text" id="chatInput" placeholder="Type a message..." 
+                   style="flex:1; padding:12px 18px; border-radius:25px; border:1px solid #e2e8f0; outline:none; font-size:0.95rem; background:#f1f5f9;">
+            <button onclick="sendMessage()" 
+                    style="background:#4a90e2; color:white; border:none; width:45px; height:45px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: transform 0.2s;">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+/**
+ * Utility to convert raw URLs in text into clickable <a> tags
+ */
 function linkify(text) {
+    if (!text) return "";
     const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-    return text.replace(urlPattern, '<a href="$1" target="_blank" class="post-link">$1</a>');
+    return text.replace(urlPattern, '<a href="$1" target="_blank" class="post-link" style="color: #4a90e2; text-decoration: none;">$1</a>');
 }
 
+/**
+ * Main function to load the profile and filtered activity
+ */
 function loadProfilePosts() {
     const params = new URLSearchParams(window.location.search);
     const targetEmail = params.get('email');
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
     
-    // 1. Get the target user's permanent record
+    // 1. Get the target user's record using their email as the key
     const userData = JSON.parse(localStorage.getItem(targetEmail));
     const allPosts = JSON.parse(localStorage.getItem('posts')) || [];
-    const userPosts = allPosts.filter(p => p.email === targetEmail);
+    
+    // 2. Filter posts by checking both 'email' and 'userEmail' for robustness
+    const userPosts = allPosts.filter(p => p.email === targetEmail || p.userEmail === targetEmail);
     const listDiv = document.getElementById('userPostsList');
 
     if (userData) {
-        // 2. Update the Big Profile Picture
+        // --- UI: Update Profile Header ---
         const mainPic = document.getElementById('mainProfilePic');
         const defaultIcon = document.getElementById('defaultIcon');
         
-        if (userData.profilePic) {
+        if (userData.profilePic && mainPic) {
             mainPic.src = userData.profilePic;
             mainPic.style.display = 'block';
             if (defaultIcon) defaultIcon.style.display = 'none';
@@ -96,35 +134,153 @@ function loadProfilePosts() {
         document.getElementById('userNameDisplay').innerText = userData.name;
         document.getElementById('userEmailDisplay').innerText = targetEmail;
 
-        // 3. Render Posts
-        if (userPosts.length > 0) {
-            listDiv.innerHTML = "";
-            userPosts.forEach(post => {
-                const postHTML = `
-                <div class="feed-card">
-                    <div class="post-header">
-                        <div class="user-avatar">
-                            <img src="${userData.profilePic || ''}" 
-                                 style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; 
-                                 display: ${userData.profilePic ? 'block' : 'none'};">
-                        </div>
-                        <div class="user-info">
-                            <h4>${post.author} <span class="role-badge">${post.year || ''}</span></h4>
-                            <p style="font-size:0.8rem; color:#aaa;">${post.time}</p>
-                        </div>
-                    </div>
-                    <div class="post-content">${linkify(post.content)}</div>
-                    ${post.image ? `<img src="${post.image}" class="post-image">` : ''}
-                </div>`;
-                listDiv.insertAdjacentHTML('beforeend', postHTML);
-            });
+        // --- UI: Chat Button Integration ---
+        // Only show message button if we are looking at someone else's profile
+        if (loggedInUser && targetEmail !== loggedInUser.email) {
+            if (!document.getElementById('messageTrigger')) {
+                const chatBtnHTML = `
+                    <button onclick="openChat('${targetEmail}', '${userData.name}')" 
+                            id="messageTrigger"
+                            style="margin-top:15px; background:#4a90e2; color:white; border:none; padding:10px 25px; border-radius:25px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 6px rgba(74, 144, 226, 0.2);">
+                        <i class="fa-solid fa-paper-plane"></i> Message ${userData.name}
+                    </button>`;
+                
+                const nameDisplay = document.getElementById('userNameDisplay');
+                if (nameDisplay) {
+                    nameDisplay.insertAdjacentHTML('afterend', chatBtnHTML);
+                }
+            }
+        }
+
+        // --- UI: Render User Posts/Activity ---
+        if (listDiv) {
+            if (userPosts.length > 0) {
+                listDiv.innerHTML = ""; // Clear "No Activity" placeholders
+                userPosts.forEach(post => {
+                    const postHTML = `
+                        <div class="feed-card" style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                            <div class="post-header" style="display: flex; align-items: center; margin-bottom: 15px;">
+                                <div class="user-avatar" style="width: 40px; height: 40px; margin-right: 12px;">
+                                    <img src="${userData.profilePic || ''}" 
+                                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; 
+                                         display: ${userData.profilePic ? 'block' : 'none'}; background: #eee;">
+                                </div>
+                                <div class="user-info">
+                                    <h4 style="margin: 0; font-size: 1rem;">${post.author || userData.name}</h4>
+                                    <p style="font-size: 0.75rem; color: #999; margin: 0;">${post.time || 'Just now'}</p>
+                                </div>
+                            </div>
+                            <div class="post-content" style="font-size: 0.95rem; line-height: 1.5; color: #444;">
+                                ${linkify(post.content)}
+                            </div>
+                            ${post.image ? `<img src="${post.image}" class="post-image" style="width: 100%; border-radius: 8px; margin-top: 15px;">` : ''}
+                        </div>`;
+                    listDiv.insertAdjacentHTML('beforeend', postHTML);
+                });
+            } else {
+                listDiv.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #aaa;">
+                        <i class="fa-solid fa-box-open" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>No posts or activity to show yet.</p>
+                    </div>`;
+            }
         }
     } else {
-        document.getElementById('userNameDisplay').innerText = "User Not Found";
+        if (document.getElementById('userNameDisplay')) {
+            document.getElementById('userNameDisplay').innerText = "User Not Found";
+        }
     }
 }
 
-window.onload = loadProfilePosts;
+// Ensure the page renders after everything is loaded
+
+let partnerEmail = "";
+
+function openChat(email, name) {
+    console.log("Opening chat with:", email); // Debug log
+    partnerEmail = email;
+    
+    const modal = document.getElementById('chatModal');
+    const title = document.getElementById('chatTitle');
+    
+    if (modal && title) {
+        title.innerText = "Chat with " + name;
+        modal.style.display = 'flex';
+        renderMessages();
+    } else {
+        console.error("Chat modal elements not found in HTML!");
+    }
+}
+
+function closeChat() {
+    document.getElementById('chatModal').style.display = 'none';
+}
+
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+    
+    // Safety checks
+    if (!input.value.trim() || !loggedInUser) return;
+
+    // 1. Get the existing messages from localStorage
+    let db = JSON.parse(localStorage.getItem('messagesDB')) || [];
+    
+    // 2. Create the message object with the 'read' property
+    const newMsg = {
+        sender: loggedInUser.email,
+        receiver: partnerEmail, // This is set when you click the Message button
+        text: input.value.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read: false // <--- THIS IS NEW: Automatically mark as unread for the receiver
+    };
+
+    // 3. Save it back to the database
+    db.push(newMsg);
+    localStorage.setItem('messagesDB', JSON.stringify(db));
+    
+    // 4. Clear the UI and refresh the chat box
+    input.value = "";
+    renderMessages();
+}
+
+function renderMessages() {
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!loggedInUser) return;
+
+    const me = loggedInUser.email;
+    const db = JSON.parse(localStorage.getItem('messagesDB')) || [];
+    const chatBox = document.getElementById('chatBox');
+    
+    // Filter messages for this conversation
+    const filtered = db.filter(m => 
+        (m.sender === me && m.receiver === partnerEmail) || 
+        (m.sender === partnerEmail && m.receiver === me)
+    );
+
+    chatBox.innerHTML = filtered.map(m => {
+        const isMe = m.sender === me;
+        return `
+            <div style="align-self: ${isMe ? 'flex-end' : 'flex-start'}; max-width: 80%;">
+                <div style="background:${isMe ? '#4a90e2' : 'white'}; 
+                            color:${isMe ? 'white' : '#333'}; 
+                            padding:10px 14px; 
+                            border-radius:18px; 
+                            border-bottom-${isMe ? 'right' : 'left'}-radius: 2px;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                            font-size:0.9rem;">
+                    ${m.text}
+                </div>
+                <div style="font-size:0.65rem; color:#888; margin-top:4px; text-align:${isMe ? 'right' : 'left'};">
+                    ${m.time}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+window.addEventListener('load', loadProfilePosts);
 </script>
 </body>
 </html>
