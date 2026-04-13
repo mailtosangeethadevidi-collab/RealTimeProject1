@@ -1,4 +1,5 @@
 // --- Navigation Logic (Internal View Switching) ---
+let partnerEmail = ""; // To track who you are chatting with
 function showPage(pageId) {
     document.querySelectorAll('.view').forEach(page => {
         page.classList.add('hidden');
@@ -187,11 +188,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 // Open and Close Modal Functions
 function openAskModal() {
-    document.getElementById('askModal').style.display = 'flex';
+    const modal = document.getElementById('askModal');
+    if (modal) {
+        modal.style.display = 'flex'; // Shows the rectangle
+    }
 }
 
 function closeAskModal() {
-    document.getElementById('askModal').style.display = 'none';
+    const modal = document.getElementById('askModal');
+    if (modal) {
+        modal.style.display = 'none'; // Hides the rectangle
+    }
 }
 
 // Direct Submission Logic
@@ -291,4 +298,120 @@ function handleLogin() {
         // If they use the old password, this will trigger!
         alert("Access Denied: Incorrect password or email.");
     }
+}
+// --- 1. Your existing function to show the count ---
+function updateDashboardMessages() {
+    const me = JSON.parse(localStorage.getItem('loggedInUser'));
+    const db = JSON.parse(localStorage.getItem('messagesDB')) || [];
+    const display = document.getElementById('unread-count-display');
+
+    if (!me || !display) return;
+
+    const unreadMessages = db.filter(m => m.receiver === me.email && m.read === false);
+    
+    if (unreadMessages.length > 0) {
+        const latest = unreadMessages[unreadMessages.length - 1];
+        display.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="background: #e53e3e; color: white; padding: 2px 8px; border-radius: 10px; font-weight: bold; font-size: 0.8rem;">
+                    ${unreadMessages.length} New
+                </span>
+                <span>Latest: "${latest.text.substring(0, 20)}..."</span>
+            </div>`;
+    } else {
+        display.innerHTML = `<span style="color: #a0aec0;">No new messages. You're all caught up!</span>`;
+    }
+}
+
+// --- 2. NEW: Function to open the chat from the card ---
+function openDashboardChat() {
+    const me = JSON.parse(localStorage.getItem('loggedInUser'));
+    const db = JSON.parse(localStorage.getItem('messagesDB')) || [];
+    
+    const myMessages = db.filter(m => m.receiver === me.email);
+
+    if (myMessages.length > 0) {
+        const latestMsg = myMessages[myMessages.length - 1];
+        const senderEmail = latestMsg.sender;
+        
+        // Fetch sender's name for the header
+        const senderData = JSON.parse(localStorage.getItem(senderEmail));
+        const senderName = senderData ? senderData.name : "Student";
+
+        // Open the modal (Ensure openChat() is defined on this page)
+        openChat(senderEmail, senderName);
+        
+        // Mark as read so the badge updates
+        db.forEach(m => {
+            if(m.sender === senderEmail && m.receiver === me.email) m.read = true;
+        });
+        localStorage.setItem('messagesDB', JSON.stringify(db));
+        updateDashboardMessages(); 
+    } else {
+        alert("No messages to display!");
+    }
+}
+
+document.addEventListener('DOMContentLoaded', updateDashboardMessages);
+
+
+function openChat(email, name) {
+    partnerEmail = email;
+    const modal = document.getElementById('chatModal');
+    if (modal) {
+        document.getElementById('chatTitle').innerText = "Chat with " + name;
+        modal.style.display = 'flex';
+        renderMessages();
+    }
+}
+
+function closeChat() {
+    document.getElementById('chatModal').style.display = 'none';
+}
+
+function renderMessages() {
+    const me = JSON.parse(localStorage.getItem('loggedInUser')).email;
+    const db = JSON.parse(localStorage.getItem('messagesDB')) || [];
+    const chatBox = document.getElementById('chatBox');
+    
+    const filtered = db.filter(m => 
+        (m.sender === me && m.receiver === partnerEmail) || 
+        (m.sender === partnerEmail && m.receiver === me)
+    );
+
+    chatBox.innerHTML = filtered.map(m => {
+        const isMe = m.sender === me;
+        return `
+            <div style="align-self: ${isMe ? 'flex-end' : 'flex-start'}; max-width: 85%;">
+                <div style="background:${isMe ? '#4a90e2' : 'white'}; 
+                            color:${isMe ? 'white' : '#333'}; 
+                            padding:12px 16px; border-radius:18px; 
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size:0.95rem;">
+                    ${m.text}
+                </div>
+            </div>`;
+    }).join('');
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+    
+    if (!input.value.trim() || !loggedInUser || !partnerEmail) return;
+
+    let db = JSON.parse(localStorage.getItem('messagesDB')) || [];
+    
+    const newMsg = {
+        sender: loggedInUser.email,
+        receiver: partnerEmail,
+        text: input.value.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read: false 
+    };
+
+    db.push(newMsg);
+    localStorage.setItem('messagesDB', JSON.stringify(db));
+    
+    input.value = ""; // Clear input
+    renderMessages(); // Refresh the UI
 }
